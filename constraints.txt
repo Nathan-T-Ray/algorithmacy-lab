@@ -1,0 +1,28 @@
+# Wheel pins from a Python 3.12 install of requirements.txt on 2026-10-09.
+# Git packages (pyphi, phyid) are pinned by commit in requirements.txt, not here.
+cloudpickle==3.1.2
+contourpy==1.4.0
+cycler==0.12.1
+fonttools==4.66.1
+graphillion==2.1
+joblib==1.6.0
+kiwisolver==1.5.1
+matplotlib==3.11.2
+more-itertools==11.1.0
+narwhals==2.26.0
+numpy==2.5.3
+ordered-set==4.1.0
+packaging==26.3
+pandas==3.0.6
+pillow==12.3.0
+psutil==7.2.2
+pyparsing==3.3.3
+python-dateutil==2.9.0.post0
+PyYAML==6.0.3
+scikit-learn==1.9.1
+scipy==1.18.1
+six==1.17.0
+tblib==3.2.2
+threadpoolctl==3.7.0
+toolz==1.2.0
+tqdm==4.70.1

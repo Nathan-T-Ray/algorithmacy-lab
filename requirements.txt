@@ -2,9 +2,9 @@ numpy
 scipy  # linear programs for cooperative-game cores (org_frontier/threads/core_stability/)
 matplotlib
 scikit-learn  # learned_surrogate/ and several org_frontier estimation probes
-# phyid — Integrated Information Decomposition, for foundations/phiid_vs_phi/ and the proxy bridge:
-#   pip install "phyid @ git+https://github.com/Imperial-MIND-lab/integrated-info-decomp"
-phyid @ git+https://github.com/Imperial-MIND-lab/integrated-info-decomp
-# PyPhi IIT-4.0 line (system-level big-phi via pyphi.new_big_phi):
-#   pip install "pyphi @ git+https://github.com/wmayner/pyphi@feature/iit-4.0"
-pyphi @ git+https://github.com/wmayner/pyphi@feature/iit-4.0
+# phyid — Integrated Information Decomposition, for foundations/phiid_vs_phi/ and the proxy bridge.
+# Pinned to a commit so an upstream push cannot silently move registered numbers.
+phyid @ git+https://github.com/Imperial-MIND-lab/integrated-info-decomp@6c5f2e9d33c985efbdf875d45cb5a2a6a5cdbf44
+# PyPhi IIT-4.0 line (system-level big-phi via pyphi.new_big_phi).
+# Pinned to the feature/iit-4.0 commit that CI has been resolving (2025-12-26).
+pyphi @ git+https://github.com/wmayner/pyphi@b78d0e342d37175cbd55cf35a6d52ae035b4c50f
