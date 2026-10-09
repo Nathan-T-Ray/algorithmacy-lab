@@ -11,11 +11,15 @@ so the number can never silently drift from the script that produced it.
 As the manifest grows, re-running every check on every pull request stops being feasible (exact Φ is
 expensive). So a pull request reproduces only the numbers it could have affected — the instrument
 control plus the studies whose files it changed — while the full manifest is reproduced nightly.
+The nightly job splits the manifest across shards so the whole set finishes inside the runner budget.
 
 Run:  python ci/reproduce.py                  # all checks (the nightly / full job)
       python ci/reproduce.py --changed-file F  # core checks + checks for studies whose files are
                                                #   listed in F; slow checks are skipped (nightly-only)
       python ci/reproduce.py NAME ...          # only the named checks
+      python ci/reproduce.py --shard I/N       # keep the I-th of N study-grouped shards (1-based)
+      python ci/reproduce.py --list            # print the selected names and exit
+      python ci/reproduce.py --json-out PATH   # also write per-check records as JSON
 
 Manifest entries may set:
   "core": true   always run, including in --changed-file mode (the instrument control)
@@ -85,6 +89,49 @@ def select_changed(checks, changed_paths):
     return selected
 
 
+def parse_shard(spec):
+    """Parse a 1-based 'I/N' shard spec. Raise ValueError on malformed input."""
+    if not isinstance(spec, str) or "/" not in spec:
+        raise ValueError(f"shard must be I/N (1-based), got {spec!r}")
+    left, right = spec.split("/", 1)
+    if not left.isdigit() or not right.isdigit():
+        raise ValueError(f"shard must be I/N (1-based), got {spec!r}")
+    index, n = int(left), int(right)
+    if n < 1 or index < 1 or index > n:
+        raise ValueError(f"shard I must be in 1..N, got {spec!r}")
+    return index, n
+
+
+def study_groups(checks):
+    """Group checks by study directory, preserving first-seen order of each group.
+
+    Checks that share a study_dir stay together so parallel shards do not race on the same
+    results/ files. A check with no study_dir is its own group.
+    """
+    groups = []
+    index = {}
+    for c in checks:
+        d = study_dir_of(c)
+        if d is None:
+            groups.append([c])
+            continue
+        if d not in index:
+            index[d] = len(groups)
+            groups.append([c])
+        else:
+            groups[index[d]].append(c)
+    return groups
+
+
+def apply_shard(checks, index, n):
+    """Keep groups whose first-seen rank r satisfies r % n == index - 1."""
+    selected = []
+    for gi, group in enumerate(study_groups(checks)):
+        if gi % n == index - 1:
+            selected.extend(group)
+    return selected
+
+
 def run_check(check):
     """Return (passed, detail). A check passes if the command exits 0 and stdout holds every
     expected string."""
@@ -112,6 +159,9 @@ def run_check(check):
 def main(argv):
     ap = argparse.ArgumentParser(description="Reproduce registered numbers from their scripts.")
     ap.add_argument("--changed-file", help="file of changed paths; run core + touched-study checks")
+    ap.add_argument("--shard", help="I/N study-grouped shard, 1-based (applied after other selection)")
+    ap.add_argument("--list", action="store_true", help="print selected check names and exit")
+    ap.add_argument("--json-out", help="write per-check {name, passed, seconds, detail} records as JSON")
     ap.add_argument("names", nargs="*", help="run only these named checks")
     args = ap.parse_args(argv)
 
@@ -131,12 +181,30 @@ def main(argv):
     else:
         label = "full"
 
+    if args.shard:
+        try:
+            index, n = parse_shard(args.shard)
+        except ValueError as e:
+            print(str(e))
+            return 2
+        checks = apply_shard(checks, index, n)
+        label = f"{label}-shard-{index}/{n}"
+
+    if args.list:
+        for c in checks:
+            print(c["name"])
+        return 0
+
     if not checks:
         print("reproduce-the-numbers — no checks selected; nothing to reproduce.")
+        if args.json_out:
+            with open(args.json_out, "w") as f:
+                json.dump([], f)
         return 0
 
     print(f"reproduce-the-numbers ({label}) — {len(checks)} check(s)\n" + "=" * 72)
     failures = 0
+    records = []
     for c in checks:
         t0 = time.monotonic()
         passed, detail = run_check(c)
@@ -147,7 +215,17 @@ def main(argv):
         if not passed:
             for line in detail.splitlines():
                 print(f"          {line}")
+        records.append({
+            "name": c["name"],
+            "passed": bool(passed),
+            "seconds": round(dt, 3),
+            "detail": detail,
+        })
     print("=" * 72)
+    if args.json_out:
+        with open(args.json_out, "w") as f:
+            json.dump(records, f, indent=2)
+            f.write("\n")
     if failures:
         print(f"{failures} check(s) failed — a published number did not reproduce.")
         return 1
