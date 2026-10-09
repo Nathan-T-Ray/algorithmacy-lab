@@ -19,9 +19,32 @@ source venv/bin/activate          # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-`requirements.txt` pulls PyPhi's IIT-4.0 line and `phyid` from git, so the install needs network
-access and takes a few minutes. Every command below assumes this venv is active and that you run
-**from the repo root**, so that `org_frontier.*` and `foundations.*` resolve.
+`requirements.txt` pulls PyPhi's IIT-4.0 line and `phyid` from git at pinned commits, and
+`constraints.txt` pins the remaining wheels. The install needs network access and takes a few
+minutes. Install with both files so the environment matches CI:
+
+```bash
+pip install -r requirements.txt -c constraints.txt
+```
+
+Every command below assumes this venv is active and that you run **from the repo root**, so that
+`org_frontier.*` and `foundations.*` resolve.
+
+### Run in a container
+
+A `Dockerfile` at the repo root builds the same pinned environment. From the repo root:
+
+```bash
+docker build -t algorithmacy-lab .
+docker run --rm algorithmacy-lab
+```
+
+The default command is the instrument control and must print `Instrument validated`. To run another
+check, pass it as the command:
+
+```bash
+docker run --rm algorithmacy-lab python ci/reproduce.py instrument-controls
+```
 
 ## 2. Confirm the instrument before you trust anything
 
